@@ -61,6 +61,16 @@ export async function updateNovel(id: string, formData: FormData) {
   redirect("/admin"); 
 }
 
+// PERBAIKAN: Fungsi hapus novel dikembalikan agar dashboard admin tidak error
+export async function deleteNovel(id: string) {
+  try {
+    await db.novel.delete({ where: { id } });
+    revalidatePath("/");
+    revalidatePath("/admin");
+  } catch (e) { console.error(e); }
+  redirect("/admin");
+}
+
 /** --- CHAPTER MANAGEMENT (FAST PERFORMANCE) --- **/
 export async function createChapter(novelId: string, novelSlug: string, formData: FormData) { 
   try {
@@ -193,4 +203,12 @@ export async function addComment(chapterId: string, formData: FormData) {
     const name = formData.get("name") as string; const content = formData.get("content") as string; const path = formData.get("path") as string;
     if (name && content) { await db.comment.create({ data: { name, content, chapterId } }); revalidatePath(path); }
   } catch (e) {}
+}
+
+// PERBAIKAN: Fungsi hapus komentar dikembalikan agar dashboard admin tidak error
+export async function deleteComment(id: string) {
+  try { 
+    await db.comment.delete({ where: { id } }); 
+    revalidatePath("/admin"); 
+  } catch (e) { console.error(e); }
 }
