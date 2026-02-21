@@ -1,7 +1,11 @@
 import { db } from "@/lib/db";
 import Link from "next/link";
-import { Book, FileText, Eye, MessageSquare, Plus, Settings, Trash2, Edit } from "lucide-react";
+import Image from "next/image"; // Diperbarui untuk performa
+import { Book, FileText, Eye, MessageSquare, Plus, Settings, Edit } from "lucide-react";
+// IMPORT FUNGSI DARI ACTIONS
 import { deleteNovel, deleteComment } from "@/lib/actions";
+// IMPORT KOMPONEN DELETE BUTTON
+import DeleteButton from "@/components/DeleteButton";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +24,7 @@ export default async function AdminDashboard() {
   });
 
   return (
-    <div className="max-w-7xl mx-auto space-y-10 pb-20">
+    <div className="max-w-7xl mx-auto space-y-10 pb-20 animate-fade-in-up">
       
       {/* HEADER & TOMBOL AKSI UTAMA */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 md:p-8 rounded-3xl border border-gray-200 shadow-sm">
@@ -29,7 +33,7 @@ export default async function AdminDashboard() {
           <p className="text-gray-500 font-medium mt-1">Selamat datang kembali, Master!</p>
         </div>
         <div className="flex items-center gap-3">
-          <Link href="/admin/settings" className="p-3 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-xl transition shadow-sm"><Settings size={20}/></Link>
+          <Link href="/admin/settings" className="p-3 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-xl transition shadow-sm" title="Pengaturan Website"><Settings size={20}/></Link>
           <Link href="/admin/novels/new" className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition shadow-md hover:shadow-lg"><Plus size={20} /> Tambah Novel</Link>
         </div>
       </div>
@@ -70,11 +74,11 @@ export default async function AdminDashboard() {
               {novels.map(novel => (
                 <div key={novel.id} className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 group hover:border-blue-200 transition">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                    <div className="w-12 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 relative">
                       {novel.coverImage ? (
-                        /* eslint-disable-next-line @next/next/no-img-element */
-                        <img src={novel.coverImage} className="w-full h-full object-cover" alt="cover"/>
-                      ) : <Book size={20} className="m-auto h-full text-gray-400"/>}
+                        // MENGGUNAKAN NEXT/IMAGE UNTUK PERFORMA
+                        <Image src={novel.coverImage} fill alt="cover" className="object-cover" sizes="48px" />
+                      ) : <Book size={20} className="m-auto h-full text-gray-400 absolute inset-0"/>}
                     </div>
                     <div>
                       <h3 className="font-bold text-gray-900 text-lg group-hover:text-blue-600 transition truncate max-w-[200px] md:max-w-xs">{novel.title}</h3>
@@ -87,11 +91,12 @@ export default async function AdminDashboard() {
                   </div>
                   <div className="flex items-center gap-2 border-t border-gray-100 sm:border-none pt-3 sm:pt-0">
                     <Link href={`/admin/novels/${novel.id}`} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-xl font-bold hover:bg-blue-600 hover:text-white transition text-sm">Kelola <Edit size={14}/></Link>
-                    {/* FIX: Menghapus onClick confirm agar tidak terjadi Error Server Component */}
-                    <form action={deleteNovel}>
-                      <input type="hidden" name="id" value={novel.id} />
-                      <button type="submit" className="p-2.5 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-xl transition" title="Hapus Permanen"><Trash2 size={16}/></button>
+                    
+                    {/* IMPLEMENTASI DELETE BUTTON YANG AMAN */}
+                    <form action={deleteNovel.bind(null, novel.id)}>
+                       <DeleteButton message={`Peringatan: Menghapus novel "${novel.title}" akan menghapus seluruh bab, komentar, dan rating di dalamnya. Yakin ingin melanjutkan?`} />
                     </form>
+
                   </div>
                 </div>
               ))}
@@ -115,10 +120,11 @@ export default async function AdminDashboard() {
                         <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md inline-block mt-1">Bab {comment.chapter.orderIndex} ({comment.chapter.novel.title.substring(0, 15)}...)</span>
                       </div>
                       
-                      {/* TOMBOL HAPUS KOMENTAR */}
+                      {/* IMPLEMENTASI DELETE BUTTON UNTUK KOMENTAR */}
                       <form action={deleteComment.bind(null, comment.id)}>
-                         <button type="submit" className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition opacity-100 lg:opacity-0 group-hover:opacity-100" title="Hapus Spam"><Trash2 size={14}/></button>
+                         <DeleteButton message="Hapus komentar ini dari database?" />
                       </form>
+
                     </div>
                     <p className="text-gray-600 text-xs leading-relaxed line-clamp-3 bg-white p-2 rounded-lg border border-gray-100">{comment.content}</p>
                   </div>
