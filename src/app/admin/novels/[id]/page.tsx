@@ -2,8 +2,10 @@ import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Plus, Edit, Trash2, BookOpen, Link as LinkIcon, Save, Image as ImageIcon, Hash, Layout, Lock } from "lucide-react";
+import { ArrowLeft, Plus, Edit, BookOpen, Link as LinkIcon, Save, Image as ImageIcon, Hash, Layout, Lock } from "lucide-react";
 import { deleteChapter, addExternalLink, deleteExternalLink, updateNovel } from "@/lib/actions";
+// IMPORT KOMPONEN DELETE BUTTON BARU
+import DeleteButton from "@/components/DeleteButton";
 
 export default async function ManageNovelPage({ params }: { params: { id: string } }) {
   const novel = await db.novel.findUnique({
@@ -120,7 +122,8 @@ export default async function ManageNovelPage({ params }: { params: { id: string
                   <div className="flex items-center gap-1">
                     <Link href={`/admin/novels/${novel.id}/chapters/${chapter.id}`} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit size={18}/></Link>
                     <form action={deleteChapter.bind(null, chapter.id, novel.id)}>
-                      <button type="submit" className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={18}/></button>
+                      {/* IMPLEMENTASI DELETE BUTTON */}
+                      <DeleteButton message={`Yakin ingin menghapus bab "${chapter.title}" secara permanen?`} />
                     </form>
                   </div>
                 </div>
@@ -155,7 +158,8 @@ export default async function ManageNovelPage({ params }: { params: { id: string
                           <span className="text-[9px] text-blue-600 truncate block">{link.url}</span>
                        </div>
                        <form action={deleteExternalLink.bind(null, link.id, novel.id, novel.slug)}>
-                          <button type="submit" className="p-1.5 text-red-500 hover:bg-red-100 rounded-lg transition"><Trash2 size={14}/></button>
+                          {/* IMPLEMENTASI DELETE BUTTON */}
+                          <DeleteButton message={`Yakin ingin menghapus tautan ${link.title}?`} />
                        </form>
                     </div>
                  ))}
