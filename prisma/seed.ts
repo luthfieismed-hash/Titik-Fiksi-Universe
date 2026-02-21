@@ -11,7 +11,6 @@ async function main() {
     update: {},
     create: {
       siteName: 'Titik Fiksi Universe',
-      globalDonationLink: 'https://saweria.co/LutfiAbdulloh',
       runningText: 'Selamat datang di Era Baru Titik Fiksi Universe!',
     },
   });
@@ -66,4 +65,5 @@ main()
     console.error(e);
     await prisma.$disconnect();
     process.exit(1);
+
   });
