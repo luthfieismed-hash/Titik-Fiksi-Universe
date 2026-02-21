@@ -1,18 +1,26 @@
 "use client";
 
-import { Trash } from "lucide-react";
+import { useFormStatus } from "react-dom";
+import { Trash2 } from "lucide-react";
 
-export default function DeleteButton({ warningText = "Yakin ingin menghapus data ini?" }: { warningText?: string }) {
+export default function DeleteButton({ message = "Yakin ingin menghapus data ini secara permanen?" }: { message?: string }) {
+  // useFormStatus mendeteksi apakah fungsi Server Action sedang berjalan (loading)
+  const { pending } = useFormStatus();
+
   return (
     <button 
       type="submit" 
-      className="p-2.5 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 rounded-lg transition" 
-      title="Hapus"
-      onClick={(e) => { 
-        if(!confirm(warningText)) e.preventDefault(); 
+      disabled={pending}
+      className={`p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center ${pending ? 'opacity-50 cursor-wait' : ''}`}
+      onClick={(e) => {
+        // Mencegah form terkirim jika admin menekan "Cancel" pada pop-up
+        if (!window.confirm(message)) {
+          e.preventDefault();
+        }
       }}
+      title="Hapus Data"
     >
-      <Trash size={18} />
+      <Trash2 size={18} className={pending ? 'animate-pulse text-red-400' : ''} />
     </button>
   );
 }
