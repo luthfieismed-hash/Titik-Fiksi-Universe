@@ -1,0 +1,101 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Settings {
+  id              Int     @id @default(1)
+  siteName        String
+  runningText     String?
+  email           String?
+  isActive        Boolean @default(true)
+  adminPassword   String  @default("Master_TFUniverse2026!")
+  // DUA KOLOM BARU PENGGANTI aboutUsText
+  visiPenulis     String? @db.Text
+  kekuatanPembaca String? @db.Text
+  copyrightText   String?
+}
+
+model Novel {
+  id            String         @id @default(cuid())
+  title         String
+  slug          String         @unique
+  synopsis      String         @db.Text
+  coverImage    String?
+  status        String         @default("Ongoing")
+  genre         String         @default("Fiksi")
+  youtubeTrailer String?
+  views         Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @default(now()) @updatedAt
+  chapters      Chapter[]
+  externalLinks ExternalLink[]
+  ratings       Rating[]
+}
+
+model Chapter {
+  id          String    @id @default(cuid())
+  title       String
+  slug        String    @unique
+  content     String    @db.Text
+  orderIndex  Int
+  isLocked    Boolean   @default(false)
+  isPublished Boolean   @default(true)
+  payLink     String?
+  unlockCode  String?   
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now()) @updatedAt
+  novelId     String
+  novel       Novel     @relation(fields: [novelId], references: [id], onDelete: Cascade)
+  comments    Comment[]
+}
+
+model ExternalLink {
+  id      String @id @default(cuid())
+  title   String
+  url     String
+  novelId String
+  novel   Novel  @relation(fields: [novelId], references: [id], onDelete: Cascade)
+}
+
+model SocialLink {
+  id       String @id @default(cuid())
+  platform String
+  url      String
+}
+
+model DonationLink {
+  id       String @id @default(cuid())
+  platform String
+  url      String
+}
+
+model Sponsor {
+  id          String  @id @default(cuid())
+  title       String
+  imageUrl    String
+  linkUrl     String
+  description String?
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  name      String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  chapterId String
+  chapter   Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+}
+
+model Rating {
+  id        String   @id @default(cuid())
+  value     Int
+  createdAt DateTime @default(now())
+  novelId   String
+  novel     Novel    @relation(fields: [novelId], references: [id], onDelete: Cascade)
+}
