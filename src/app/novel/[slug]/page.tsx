@@ -21,7 +21,7 @@ export default async function NovelDetailPage({ params }: { params: { slug: stri
     }
   });
 
-  if (!novel) notFound();
+  if (!novel) return notFound();
 
   const totalRatings = novel.ratings.length;
   const avgRating = totalRatings > 0 
@@ -55,9 +55,20 @@ export default async function NovelDetailPage({ params }: { params: { slug: stri
                 <span className="text-gray-400 uppercase tracking-widest">Pembaca</span>
                 <span className="text-gray-900 flex items-center gap-2"><Eye size={16}/> {novel.views}</span>
               </div>
-              <div className="flex items-center justify-between text-xs md:text-sm font-bold">
-                <span className="text-gray-400 uppercase tracking-widest">Genre</span>
-                <span className="text-gray-900">{novel.genre}</span>
+              
+              {/* PERBAIKAN VISUAL GENRE: Menjadi bentuk Kapsul/Badge yang bisa tersusun otomatis secara rapi */}
+              <div className="flex items-start justify-between text-xs md:text-sm font-bold gap-4 pt-1">
+                <span className="text-gray-400 uppercase tracking-widest flex-shrink-0 pt-1">Genre</span>
+                <div className="flex flex-wrap justify-end gap-1.5">
+                  {novel.genre.split(',').map((g, index) => (
+                    <span 
+                      key={index} 
+                      className="bg-gray-50 border border-gray-200 text-gray-700 px-2.5 py-1 rounded-lg text-[10px] md:text-xs hover:border-blue-200 hover:bg-blue-50 transition-colors cursor-default"
+                    >
+                      {g.trim()}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -100,14 +111,12 @@ export default async function NovelDetailPage({ params }: { params: { slug: stri
                   <Link 
                     key={chapter.id} 
                     href={`/novel/${novel.slug}/${chapter.slug}`}
-                    /* OPTIMASI ANDROID: Menggunakan items-start agar area klik proposional dan teks bisa wrap ke bawah */
                     className="flex items-start justify-between p-4 bg-white border border-gray-100 rounded-2xl hover:border-blue-500 hover:shadow-md transition group min-h-[72px]"
                   >
                     <div className="flex items-start gap-4 flex-1 pr-2">
                       <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center font-bold text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition flex-shrink-0 mt-0.5">
                         {chapter.orderIndex}
                       </div>
-                      {/* Ganti truncate jadi line-clamp-2 agar judul panjang bisa terbaca utuh di layar Android */}
                       <span className="font-bold text-gray-700 text-sm md:text-base group-hover:text-gray-900 line-clamp-2 leading-snug">{chapter.title}</span>
                     </div>
                     {chapter.isLocked && <Lock size={16} className="text-amber-500 flex-shrink-0 mt-2" />}
