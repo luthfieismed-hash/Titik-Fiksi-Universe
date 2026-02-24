@@ -1,121 +1,132 @@
 import { db } from "@/lib/db";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, ChevronRight, Home, BookOpen, ExternalLink, Heart, Coffee } from "lucide-react";
-import ReaderView from "@/components/ReaderView";
-import ReaderInteractive from "@/components/ReaderInteractive";
-import CommentSection from "@/components/CommentSection"; 
-import RatingInput from "@/components/RatingInput"; 
-import ScrollToTop from "@/components/ScrollToTop";
+import Image from "next/image";
+import Link from "next/link";
+import { Star, Eye, BookOpen, Lock, ExternalLink } from "lucide-react";
+import ViewTracker from "@/components/ViewTracker";
+import BookmarkButton from "@/components/BookmarkButton";
+import ShareButton from "@/components/ShareButton";
+import TrailerModal from "@/components/TrailerModal";
+import ExpandableSynopsis from "@/components/ExpandableSynopsis";
 
 export const revalidate = 60;
 
-export default async function ChapterReaderPage({ params }: { params: { slug: string; chapterSlug: string } }) {
-  const chapter = await db.chapter.findFirst({
-    where: { slug: params.chapterSlug, novel: { slug: params.slug } },
-    include: { novel: { include: { chapters: { where: { isPublished: true }, orderBy: { orderIndex: 'asc' } } } }, comments: { orderBy: { createdAt: 'desc' } } }
+export default async function NovelDetailPage({ params }: { params: { slug: string } }) {
+  const novel = await db.novel.findUnique({
+    where: { slug: params.slug },
+    include: { 
+      chapters: { where: { isPublished: true }, orderBy: { orderIndex: 'asc' } },
+      ratings: true,
+      externalLinks: true 
+    }
   });
 
-  if (!chapter || !chapter.isPublished) return notFound();
+  if (!novel) return notFound();
 
-  const donationLinks = await db.donationLink.findMany();
-  const sponsors = await db.sponsor.findMany();
-
-  const prevChapter = await db.chapter.findFirst({ where: { novelId: chapter.novelId, isPublished: true, orderIndex: chapter.orderIndex - 1 } });
-  const nextChapter = await db.chapter.findFirst({ where: { novelId: chapter.novelId, isPublished: true, orderIndex: chapter.orderIndex + 1 } });
-  const prevUrl = prevChapter ? `/novel/${params.slug}/${prevChapter.slug}` : null;
-  const nextUrl = nextChapter ? `/novel/${params.slug}/${nextChapter.slug}` : null;
+  const totalRatings = novel.ratings.length;
+  const avgRating = totalRatings > 0 
+    ? (novel.ratings.reduce((a, b) => a + b.value, 0) / totalRatings).toFixed(1) 
+    : "0.0";
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 w-full overflow-x-hidden">
-      <div className="sticky top-[72px] md:top-20 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200/60 py-3 px-2 md:px-4 shadow-sm transition-all duration-300 w-full">
-        <div className="container mx-auto max-w-4xl flex items-center justify-between">
-          <Link href={`/novel/${params.slug}`} className="p-2 hover:bg-gray-100 rounded-full transition text-gray-700 flex-shrink-0">
-            <ChevronLeft size={24} />
-          </Link>
-          <div className="text-center overflow-hidden flex-1 px-2 md:px-4">
-            <h1 className="text-sm md:text-base font-black text-gray-900 truncate">Bab {chapter.orderIndex}: {chapter.title}</h1>
-            <p className="text-[10px] md:text-xs font-bold text-gray-500 truncate">{chapter.novel.title}</p>
-          </div>
-          <Link href="/" className="p-2 hover:bg-gray-100 rounded-full transition text-gray-700 flex-shrink-0">
-            <Home size={20} />
-          </Link>
-        </div>
-      </div>
-
-      <div className="pt-8 px-3 sm:px-6 container mx-auto max-w-4xl w-full">
-        <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-[10px] sm:text-xs md:text-sm text-gray-500 mb-4 font-medium px-2">
-          <Link href="/" className="hover:text-blue-600 transition">Beranda</Link>
-          <ChevronRight size={12} className="sm:w-[14px] sm:h-[14px]" />
-          <Link href={`/novel/${params.slug}`} className="hover:text-blue-600 transition truncate max-w-[120px] sm:max-w-[200px]">{chapter.novel.title}</Link>
-          <ChevronRight size={12} className="sm:w-[14px] sm:h-[14px]" />
-          <span className="text-gray-900 font-bold truncate">Bab {chapter.orderIndex}</span>
-        </div>
-
-        {/* PERBAIKAN POIN 5: overflow-hidden dihapus di sini agar menu pilihan bab bisa muncul dengan sempurna */}
-        <div className="bg-[var(--paper-bg,white)] text-[var(--paper-text,black)] rounded-2xl md:rounded-3xl shadow-xl p-5 sm:p-6 md:p-12 transition-colors duration-500 min-h-[70vh] w-full">
-          <ReaderInteractive novelSlug={params.slug} currentChapterSlug={params.chapterSlug} chapters={chapter.novel.chapters} prevUrl={prevUrl} nextUrl={nextUrl} />
-          <div className="w-full max-w-full overflow-x-hidden mt-4 md:mt-0 break-words">
-            <ReaderView content={chapter.content} isLocked={chapter.isLocked} payLink={chapter.payLink} chapterId={chapter.id} unlockCode={chapter.unlockCode} />
-          </div>
-        </div>
-
-        {donationLinks.length > 0 && (
-          <div className="mt-10 bg-amber-50 border border-amber-200 rounded-3xl p-6 md:p-8 text-center shadow-sm w-full">
-            <Coffee size={40} className="mx-auto text-amber-600 mb-4 animate-bounce" />
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Suka dengan bab ini?</h3>
-            <p className="text-gray-600 text-sm mb-6 max-w-md mx-auto leading-relaxed">Dukungan dari Anda adalah energi utama agar penulis tetap semangat.</p>
-            <div className="flex flex-wrap justify-center gap-4">
-              {donationLinks.map((link, idx) => (
-                <Link key={link.id} href={link.url} target="_blank" className={`text-white px-6 py-3 rounded-xl font-bold hover:scale-105 transition shadow-sm flex items-center justify-center gap-2 w-full sm:w-auto ${idx % 2 === 0 ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-900 hover:bg-black'}`}>
-                  <Heart size={18} className={idx % 2 === 0 ? 'text-pink-300' : 'text-red-500'} /> via {link.platform}
-                </Link>
-              ))}
+    <div className="min-h-screen bg-gray-50 pt-28 pb-20">
+      <ViewTracker novelId={novel.id} />
+      
+      <div className="container mx-auto px-4 max-w-6xl">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12">
+          
+          {/* KIRI: Sampul & Metadata */}
+          <div className="lg:col-span-4 space-y-6 md:space-y-8">
+            <div className="relative aspect-[2/3] rounded-3xl overflow-hidden shadow-2xl border border-gray-200 bg-white group w-2/3 mx-auto md:w-full">
+              {novel.coverImage ? (
+                <Image src={novel.coverImage} alt={novel.title} fill priority className="object-cover group-hover:scale-105 transition duration-700" />
+              ) : <div className="absolute inset-0 flex items-center justify-center bg-gray-100 text-gray-400"><BookOpen size={64}/></div>}
+              <div className="absolute top-4 left-4 bg-black/70 backdrop-blur-md text-yellow-400 font-black px-4 py-2 rounded-2xl flex items-center gap-2 shadow-lg z-10">
+                <Star size={18} fill="currentColor"/> {avgRating}
+              </div>
             </div>
-          </div>
-        )}
 
-        {!chapter.isLocked && sponsors.length > 0 && (
-          <div className="mt-8 space-y-6 w-full">
-            {sponsors.map(sponsor => (
-              <div key={sponsor.id} className="p-1 rounded-3xl bg-gradient-to-r from-blue-500 to-indigo-600 shadow-md w-full">
-                <div className="bg-white rounded-[22px] p-4 sm:p-6 flex flex-col sm:flex-row items-center gap-6 relative">
-                  <div className="absolute -top-3 -right-3 bg-yellow-400 text-black text-[10px] font-black uppercase px-2 py-1 rounded-full shadow-sm">Sponsor</div>
-                  <div className="w-full sm:w-1/3 aspect-video sm:aspect-square bg-gray-100 rounded-xl overflow-hidden flex-shrink-0">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={sponsor.imageUrl} alt={sponsor.title} className="w-full h-full object-cover" />
-                  </div>
-                  <div className="flex-1 text-center sm:text-left">
-                    <h4 className="font-bold text-lg text-gray-900 mb-1">{sponsor.title}</h4>
-                    {sponsor.description && <p className="text-sm text-gray-600 mb-4">{sponsor.description}</p>}
-                    <Link href={sponsor.linkUrl} target="_blank" className="inline-flex items-center justify-center gap-2 bg-black text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-gray-800 transition w-full sm:w-auto">Lihat Produk <ExternalLink size={14} /></Link>
-                  </div>
+            <div className="bg-white p-5 md:p-6 rounded-3xl border border-gray-100 shadow-sm space-y-4">
+              <div className="flex items-center justify-between text-xs md:text-sm font-bold border-b border-gray-50 pb-4">
+                <span className="text-gray-400 uppercase tracking-widest">Status</span>
+                <span className="text-blue-600 bg-blue-50 px-3 py-1 rounded-full">{novel.status}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs md:text-sm font-bold border-b border-gray-50 pb-4">
+                <span className="text-gray-400 uppercase tracking-widest">Pembaca</span>
+                <span className="text-gray-900 flex items-center gap-2"><Eye size={16}/> {novel.views}</span>
+              </div>
+              
+              {/* PERBAIKAN VISUAL GENRE: Menjadi bentuk Kapsul/Badge yang bisa tersusun otomatis secara rapi */}
+              <div className="flex items-start justify-between text-xs md:text-sm font-bold gap-4 pt-1">
+                <span className="text-gray-400 uppercase tracking-widest flex-shrink-0 pt-1">Genre</span>
+                <div className="flex flex-wrap justify-end gap-1.5">
+                  {novel.genre.split(',').map((g, index) => (
+                    <span 
+                      key={index} 
+                      className="bg-gray-50 border border-gray-200 text-gray-700 px-2.5 py-1 rounded-lg text-[10px] md:text-xs hover:border-blue-200 hover:bg-blue-50 transition-colors cursor-default"
+                    >
+                      {g.trim()}
+                    </span>
+                  ))}
                 </div>
               </div>
-            ))}
-          </div>
-        )}
+            </div>
 
-        <div className="mt-12 bg-white rounded-3xl p-5 sm:p-6 md:p-8 shadow-sm border border-gray-200 w-full overflow-hidden">
-          <RatingInput novelId={chapter.novelId} />
-          <div className="mt-8 pt-8 border-t border-gray-100">
-             <CommentSection chapterId={chapter.id} comments={chapter.comments} />
-          </div>
-        </div>
+            {/* Platform Eksternal */}
+            {novel.externalLinks.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest ml-2">Tersedia Juga Di:</h3>
+                <div className="grid grid-cols-1 gap-2">
+                  {novel.externalLinks.map((link) => (
+                    <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-2xl hover:border-blue-500 transition shadow-sm group">
+                      <span className="font-bold text-gray-700 text-sm group-hover:text-blue-600">{link.title}</span>
+                      <ExternalLink size={16} className="text-gray-300 group-hover:text-blue-500 flex-shrink-0" />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
 
-        <div className="mt-10 grid grid-cols-2 gap-3 sm:gap-4 w-full">
-          {prevChapter ? (
-            <Link href={`/novel/${params.slug}/${prevChapter.slug}`} className="flex items-center justify-center gap-2 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-white border border-gray-200 hover:bg-gray-50 transition font-bold text-gray-700 shadow-sm text-xs sm:text-base"><ChevronLeft size={16}/> Sebelumnya</Link>
-          ) : <div/>}
-          {nextChapter ? (
-            <Link href={`/novel/${params.slug}/${nextChapter.slug}`} className="flex items-center justify-center gap-2 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-blue-600 text-white hover:bg-blue-700 transition font-bold shadow-md text-xs sm:text-base">Selanjutnya <ChevronRight size={16}/></Link>
-          ) : (
-            <Link href={`/novel/${params.slug}`} className="flex items-center justify-center gap-2 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-white border border-gray-200 hover:bg-gray-50 transition font-bold text-gray-700 shadow-sm text-xs sm:text-base">Selesai <BookOpen size={16}/></Link>
-          )}
+            <div className="flex flex-col gap-3">
+              <BookmarkButton novel={{ id: novel.id, title: novel.title }} />
+              <ShareButton title={novel.title} />
+              {novel.youtubeTrailer && <TrailerModal youtubeId={novel.youtubeTrailer} />}
+            </div>
+          </div>
+
+          {/* KANAN: Sinopsis & Daftar Bab */}
+          <div className="lg:col-span-8 space-y-10 md:space-y-12">
+            <div>
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 mb-4 md:mb-6 leading-tight text-center md:text-left">{novel.title}</h1>
+              <ExpandableSynopsis text={novel.synopsis} />
+            </div>
+
+            <div className="space-y-6">
+              <div className="flex items-center justify-between border-b border-gray-200 pb-4">
+                <h2 className="text-xl md:text-2xl font-black text-gray-900 flex items-center gap-3">Daftar Isi <span className="text-xs md:text-sm font-bold bg-blue-600 text-white px-3 py-1 rounded-full">{novel.chapters.length} Bab</span></h2>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {novel.chapters.map((chapter) => (
+                  <Link 
+                    key={chapter.id} 
+                    href={`/novel/${novel.slug}/${chapter.slug}`}
+                    className="flex items-start justify-between p-4 bg-white border border-gray-100 rounded-2xl hover:border-blue-500 hover:shadow-md transition group min-h-[72px]"
+                  >
+                    <div className="flex items-start gap-4 flex-1 pr-2">
+                      <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center font-bold text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition flex-shrink-0 mt-0.5">
+                        {chapter.orderIndex}
+                      </div>
+                      <span className="font-bold text-gray-700 text-sm md:text-base group-hover:text-gray-900 line-clamp-2 leading-snug">{chapter.title}</span>
+                    </div>
+                    {chapter.isLocked && <Lock size={16} className="text-amber-500 flex-shrink-0 mt-2" />}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-      {/* ScrollToTop tetap dipertahankan KHUSUS di mode baca ini (Poin 3) */}
-      <ScrollToTop />
     </div>
   );
 }
