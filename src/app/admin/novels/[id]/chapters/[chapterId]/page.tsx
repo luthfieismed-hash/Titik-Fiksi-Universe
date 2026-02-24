@@ -1,20 +1,19 @@
 import { db } from "@/lib/db";
+import { updateChapter } from "@/lib/actions";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import dynamic from "next/dynamic"; // Penambahan jeli untuk performa
-import { ArrowLeft, Save, Layout, FileText, Lock } from "lucide-react";
-import { updateChapter } from "@/lib/actions";
+import dynamic from "next/dynamic";
+import { ArrowLeft, Edit, AlertTriangle } from "lucide-react";
+import SubmitButton from "@/components/SubmitButton";
 
-// Memuat Rich Text Editor secara dinamis agar halaman tidak berat/lemot
 const RichTextEditor = dynamic(() => import("@/components/RichTextEditor"), { 
   ssr: false,
-  loading: () => <div className="h-96 w-full bg-gray-100 animate-pulse rounded-3xl flex items-center justify-center text-gray-400 font-bold">Memuat Editor Profesional...</div>
+  loading: () => <div className="h-64 w-full bg-gray-50 animate-pulse rounded-xl flex items-center justify-center text-gray-400 font-bold border border-gray-200">Menyiapkan Editor Teks...</div>
 });
 
 export default async function EditChapterPage({ params }: { params: { id: string, chapterId: string } }) {
-  // Parallel Fetching: Memuat data novel dan bab sekaligus
   const [novel, chapter] = await Promise.all([
-    db.novel.findUnique({ where: { id: params.id }, select: { title: true, slug: true, id: true } }),
+    db.novel.findUnique({ where: { id: params.id } }),
     db.chapter.findUnique({ where: { id: params.chapterId } })
   ]);
 
@@ -22,85 +21,71 @@ export default async function EditChapterPage({ params }: { params: { id: string
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-20 animate-fade-in-up">
-      {/* HEADER NAVIGASI */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-6">
-        <div>
-          <h1 className="text-2xl font-black text-gray-900 flex items-center gap-3">
-            <FileText className="text-blue-600" /> Edit <span className="text-blue-600">Bab Profesional</span>
-          </h1>
-          <p className="text-sm font-bold text-gray-400 mt-1 uppercase tracking-widest">{novel.title}</p>
-        </div>
-        <Link href={`/admin/novels/${novel.id}`} className="flex items-center gap-2 text-gray-500 hover:text-gray-900 font-bold transition">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h1 className="text-3xl font-black text-gray-900 flex items-center gap-3"><Edit className="text-blue-600"/> Edit Bab</h1>
+        <Link href={`/admin/novels/${params.id}`} className="inline-flex items-center justify-center gap-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-5 py-2.5 rounded-xl font-bold shadow-sm transition">
           <ArrowLeft size={18} /> Kembali ke Novel
         </Link>
       </div>
 
-      <form action={updateChapter.bind(null, chapter.id, novel.id, novel.slug)} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
-        {/* AREA EDITOR PROFESIONAL */}
-        <div className="lg:col-span-8 space-y-6">
-          <div className="bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
-              <span className="font-black text-xs text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                <Layout size={16}/> Konten Cerita (Rich Text Mode)
-              </span>
-              <button type="submit" className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-blue-700 transition shadow-lg shadow-blue-100">
-                <Save size={18} /> Simpan Bab
-              </button>
+      <div className="bg-white p-6 md:p-10 rounded-3xl border border-gray-200 shadow-sm">
+        <form action={updateChapter.bind(null, chapter.id, novel.id, novel.slug)} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-bold text-gray-700 mb-2">Judul Bab</label>
+              <input type="text" name="title" defaultValue={chapter.title} required className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none font-bold" />
             </div>
-            <div className="p-8 space-y-6">
-              <div className="space-y-2">
-                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Judul Bab</label>
-                <input type="text" name="title" defaultValue={chapter.title} required className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold" />
-              </div>
-              
-              {/* FITUR DIKEMBALIKAN: Editor dengan dukungan formatting penuh */}
-              <div className="space-y-2 min-h-[500px]">
-                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Konten Novel</label>
-                <RichTextEditor 
-                  name="content" 
-                  defaultValue={chapter.content} 
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">Urutan Bab (Angka)</label>
+              <input type="number" name="orderIndex" defaultValue={chapter.orderIndex} required min="1" className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none" />
             </div>
           </div>
-        </div>
 
-        {/* SIDEBAR PENGATURAN */}
-        <div className="lg:col-span-4 space-y-6">
-          <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm space-y-6">
-            <h3 className="font-bold text-gray-900 flex items-center gap-2 text-sm uppercase tracking-widest border-b pb-4">
-              <Lock size={16} className="text-amber-500"/> Akses & Keamanan
-            </h3>
-            
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                <span className="text-xs font-black text-gray-800">Publikasikan</span>
-                <input type="checkbox" name="isPublished" defaultChecked={chapter.isPublished} className="w-6 h-6 rounded-lg text-blue-600" />
-              </div>
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                <span className="text-xs font-black text-gray-800">Kunci Bab</span>
-                <input type="checkbox" name="isLocked" defaultChecked={chapter.isLocked} className="w-6 h-6 rounded-lg text-amber-500" />
-              </div>
+          {/* KOLOM SLUG YANG SEBELUMNYA HILANG KINI DIKEMBALIKAN */}
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">Slug URL</label>
+            <input type="text" name="slug" defaultValue={chapter.slug} required className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none font-mono text-sm text-gray-500" />
+          </div>
+
+          <div className="pt-4">
+            <div className="flex items-center justify-between mb-2">
+               <label className="block text-sm font-bold text-gray-700">Isi Cerita</label>
+               <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-1 rounded-md font-bold flex items-center gap-1"><AlertTriangle size={12}/> Tips: Tekan Ctrl+Shift+V saat Paste</span>
             </div>
+            <RichTextEditor name="content" defaultValue={chapter.content} />
+          </div>
 
-            <div className="space-y-4 pt-4 border-t border-gray-100">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-gray-400 uppercase">Urutan Bab (No.)</label>
-                <input type="number" name="orderIndex" defaultValue={chapter.orderIndex} className="w-full p-3 bg-gray-50 border rounded-xl font-bold" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-gray-400 uppercase">Kode Akses</label>
-                <input type="text" name="unlockCode" defaultValue={chapter.unlockCode || ""} className="w-full p-3 bg-gray-50 border rounded-xl font-mono text-sm" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-gray-400 uppercase">Link Pembayaran</label>
-                <input type="url" name="payLink" defaultValue={chapter.payLink || ""} className="w-full p-3 bg-gray-50 border rounded-xl text-xs" />
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-gray-100 mt-6">
+             <label className="flex items-start gap-4 p-5 border border-gray-200 rounded-2xl cursor-pointer hover:bg-gray-50 transition shadow-sm">
+                <input type="checkbox" name="isPublished" defaultChecked={chapter.isPublished} className="w-6 h-6 mt-1 accent-blue-600 cursor-pointer" />
+                <div>
+                   <span className="font-black text-gray-900 block text-lg">Publikasikan Bab</span>
+                   <span className="text-sm text-gray-500 leading-relaxed mt-1 block">Tampilkan bab ini ke pembaca publik.</span>
+                </div>
+             </label>
+             <label className="flex items-start gap-4 p-5 border border-amber-200 bg-amber-50/50 rounded-2xl cursor-pointer hover:bg-amber-50 transition shadow-sm">
+                <input type="checkbox" name="isLocked" defaultChecked={chapter.isLocked} className="w-6 h-6 mt-1 accent-amber-600 cursor-pointer" />
+                <div>
+                   <span className="font-black text-amber-900 block text-lg">Kunci Bab (Premium)</span>
+                   <span className="text-sm text-amber-700 leading-relaxed mt-1 block">Pembaca butuh Kode Akses untuk membukanya.</span>
+                </div>
+             </label>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-100 mt-6">
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">Link Donasi (Saweria/Trakteer)</label>
+              <input type="url" name="payLink" defaultValue={chapter.payLink || ""} className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none text-sm" />
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">Kode Akses / Password</label>
+              <input type="text" name="unlockCode" defaultValue={chapter.unlockCode || ""} className="w-full p-4 bg-amber-50 border border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-600 outline-none font-black text-amber-900 tracking-widest" />
             </div>
           </div>
-        </div>
-      </form>
+
+          <SubmitButton isEdit={true} />
+        </form>
+      </div>
     </div>
   );
 }
